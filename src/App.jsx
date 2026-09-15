@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/AuthContext'
 import Login from '@/pages/Login'
 import Bookings from '@/pages/Bookings'
+import Site from '@/pages/Site'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -22,6 +23,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
+      <Route path="/site" element={<ProtectedRoute><Site /></ProtectedRoute>} />
     </Routes>
   )
 }

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { LogOut, Compass, Inbox, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { Inbox, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/AuthContext'
 import { BOOKING_STATUSES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
+import Header from '@/components/Header'
 import BookingRow from '@/components/BookingRow'
 import BookingDetailModal from '@/components/BookingDetailModal'
 
@@ -23,7 +23,6 @@ function StatCard({ icon: Icon, label, value, tone }) {
 }
 
 export default function Bookings() {
-  const { user, logout } = useAuth()
   const qc = useQueryClient()
   const [openId, setOpenId] = useState(null)
   const [filter, setFilter] = useState('all')
@@ -57,25 +56,7 @@ export default function Bookings() {
 
   return (
     <div className="min-h-screen">
-      <header className="bg-white/90 backdrop-blur border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-[1200px] mx-auto px-6 py-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-dark flex items-center justify-center text-white shadow-md shadow-orange-200">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="font-display font-bold text-slate-800 text-base leading-tight">Desafiar Viana</h1>
-              <p className="text-[11px] text-slate-400 font-medium">Pedidos de Marcação</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs text-slate-400 font-medium hidden sm:inline">{user?.email}</span>
-            <button onClick={logout} className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors" title="Sair">
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       <main className="max-w-[1200px] mx-auto p-6 space-y-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
