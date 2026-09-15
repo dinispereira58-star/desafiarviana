@@ -1,26 +1,83 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Save, Phone, Mail, MessageCircle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Save, Phone, Mail, MessageCircle, ArrowLeft, RefreshCw, ExternalLink } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { broadcastPreview } from '@/lib/broadcastPreview'
 import Header from '@/components/Header'
-import ActivityFormModal from '@/components/ActivityFormModal'
+import ActivityEditForm from '@/components/ActivityEditForm'
 
-const iCls = 'w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
+const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
+const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://desafiarviana-site.vercel.app'
 
-function ActivitiesTab() {
+function newActivityDraft() {
+  return {
+    id: '', name: 'Nova atividade', tagline: '', emoji: '🎯', description: '', color: 'from-orange-500 to-red-600',
+    calculator_type: 'people', min_people: 6, price_per_person: 10,
+    ball_packages: [], items: [], is_active: true, position: 999,
+  }
+}
+function slugify(s) {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+}
+
+export default function Site() {
   const qc = useQueryClient()
-  const [editing, setEditing] = useState(null)
-  const [showNew, setShowNew] = useState(false)
+  const iframeRef = useRef()
+  const [tab, setTab] = useState('activities')
+  const [editingId, setEditingId] = useState(null) // id da atividade a editar, ou 'NEW'
 
-  const { data: activities = [], isLoading } = useQuery({
+  const { data: activities = [] } = useQuery({
     queryKey: ['activities'],
     queryFn: async () => {
       const { data, error } = await supabase.from('activities').select('*').order('position', { ascending: true })
       if (error) throw error
       return data || []
     },
+  })
+  const { data: settings } = useQuery({
+    queryKey: ['site-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('site_settings').select('*')
+      if (error) throw error
+      return Object.fromEntries((data || []).map(s => [s.key, s.value]))
+    },
+  })
+
+  // Cópias de rascunho — é nelas que se edita; são o que é transmitido para
+  // a pré-visualização em tempo real, antes (ou mesmo sem) gravar.
+  const [draftActivities, setDraftActivities] = useState([])
+  const [draftSettings, setDraftSettings] = useState({})
+  const [draftForm, setDraftForm] = useState(null) // formulário da atividade a editar neste momento
+
+  useEffect(() => { setDraftActivities(activities) }, [activities])
+  useEffect(() => { if (settings) setDraftSettings(settings) }, [settings])
+
+  // Lista efetiva a pré-visualizar: as draftActivities, mas com a que está
+  // a ser editada substituída pelo formulário em curso (ainda não gravado).
+  const previewActivities = useMemo(() => {
+    if (!draftForm) return draftActivities
+    if (editingId === 'NEW') return [...draftActivities, { ...draftForm, id: draftForm.id || slugify(draftForm.name) || 'preview-nova' }]
+    return draftActivities.map(a => a.id === editingId ? { ...a, ...draftForm } : a)
+  }, [draftActivities, draftForm, editingId])
+
+  useEffect(() => {
+    broadcastPreview(iframeRef, { activities: previewActivities, settings: draftSettings })
+  }, [previewActivities, draftSettings])
+
+  const startEdit = (activity) => { setEditingId(activity.id); setDraftForm({ ...activity }) }
+  const startNew = () => { setEditingId('NEW'); setDraftForm(newActivityDraft()) }
+  const cancelEdit = () => { setEditingId(null); setDraftForm(null) }
+
+  const saveActivity = useMutation({
+    mutationFn: async () => {
+      const id = editingId === 'NEW' ? (slugify(draftForm.name) || `atividade-${Date.now()}`) : editingId
+      const { error } = await supabase.from('activities').upsert({ ...draftForm, id, updated_at: new Date().toISOString() })
+      if (error) throw error
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities'] }); toast.success('Guardado!'); cancelEdit() },
+    onError: e => toast.error('Erro: ' + e.message),
   })
 
   const toggleActive = useMutation({
@@ -31,7 +88,7 @@ function ActivitiesTab() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['activities'] }),
   })
 
-  const remove = useMutation({
+  const removeActivity = useMutation({
     mutationFn: async (id) => {
       const { error } = await supabase.from('activities').delete().eq('id', id)
       if (error) throw error
@@ -40,63 +97,9 @@ function ActivitiesTab() {
     onError: e => toast.error('Erro: ' + e.message),
   })
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-400">{activities.length} atividade(s) — o que estiver "Visível" aparece no site</p>
-        <button onClick={() => setShowNew(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-xs font-bold shadow-sm">
-          <Plus className="w-3.5 h-3.5" /> Nova Atividade
-        </button>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2.5">{[1, 2, 3].map(i => <div key={i} className="h-16 bg-white rounded-xl border border-slate-100 animate-pulse" />)}</div>
-      ) : (
-        <div className="space-y-2.5">
-          {activities.map(a => (
-            <div key={a.id} className="flex items-center gap-3.5 bg-white border border-slate-200 rounded-xl px-4 py-3.5">
-              <div className={cn('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center text-lg shrink-0', a.color)}>{a.emoji}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 truncate">{a.name}</p>
-                <p className="text-xs text-slate-400 truncate">{a.tagline}</p>
-              </div>
-              <button onClick={() => toggleActive.mutate(a)} title={a.is_active ? 'Visível — clicar para ocultar' : 'Oculto — clicar para mostrar'}
-                className={cn('p-2 rounded-lg transition-colors shrink-0', a.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-slate-300 hover:bg-slate-50')}>
-                {a.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              </button>
-              <button onClick={() => setEditing(a)} className="p-2 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors shrink-0"><Pencil className="w-4 h-4" /></button>
-              <button onClick={() => { if (confirm(`Eliminar "${a.name}"?`)) remove.mutate(a.id) }} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors shrink-0"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {(showNew || editing) && (
-        <ActivityFormModal activity={editing} onClose={() => { setShowNew(false); setEditing(null) }} />
-      )}
-    </div>
-  )
-}
-
-function ContactTab() {
-  const qc = useQueryClient()
-  const [form, setForm] = useState({ contact_phone: '', contact_phone_link: '', contact_email: '', whatsapp_number: '' })
-
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ['site-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('site_settings').select('*')
-      if (error) throw error
-      return Object.fromEntries((data || []).map(s => [s.key, s.value]))
-    },
-  })
-
-  useEffect(() => { if (settings) setForm(f => ({ ...f, ...settings })) }, [settings])
-
-  const save = useMutation({
+  const saveSettings = useMutation({
     mutationFn: async () => {
-      const rows = Object.entries(form).map(([key, value]) => ({ key, value }))
+      const rows = Object.entries(draftSettings).map(([key, value]) => ({ key, value }))
       const { error } = await supabase.from('site_settings').upsert(rows)
       if (error) throw error
     },
@@ -104,55 +107,110 @@ function ContactTab() {
     onError: e => toast.error('Erro: ' + e.message),
   })
 
-  if (isLoading) return <div className="h-40 bg-white rounded-xl border border-slate-100 animate-pulse" />
-
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg space-y-4">
-      <div>
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1.5"><Phone className="w-3.5 h-3.5" /> Telefone (texto mostrado)</label>
-        <input value={form.contact_phone} onChange={e => setForm(f => ({ ...f, contact_phone: e.target.value }))} className={iCls} placeholder="926 150 134 / 967 543 491" />
-      </div>
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Número para ligar (só dígitos, com indicativo)</label>
-        <input value={form.contact_phone_link} onChange={e => setForm(f => ({ ...f, contact_phone_link: e.target.value }))} className={iCls} placeholder="351926150134" />
-      </div>
-      <div>
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1.5"><Mail className="w-3.5 h-3.5" /> Email</label>
-        <input value={form.contact_email} onChange={e => setForm(f => ({ ...f, contact_email: e.target.value }))} className={iCls} />
-      </div>
-      <div>
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 mb-1.5"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp (com indicativo, sem espaços)</label>
-        <input value={form.whatsapp_number} onChange={e => setForm(f => ({ ...f, whatsapp_number: e.target.value }))} className={iCls} placeholder="351926150134" />
-      </div>
-      <button onClick={() => save.mutate()} disabled={save.isPending}
-        className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50">
-        {save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Guardar
-      </button>
-    </div>
-  )
-}
-
-export default function Site() {
-  const [tab, setTab] = useState('activities')
-
-  return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="max-w-[1200px] mx-auto p-6 space-y-6">
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
-          <button onClick={() => setTab('activities')}
-            className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-colors', tab === 'activities' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>
-            Atividades
-          </button>
-          <button onClick={() => setTab('contact')}
-            className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-colors', tab === 'contact' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>
-            Contacto
-          </button>
-        </div>
+      <div className="flex-1 flex min-h-0">
+        {/* ── BARRA LATERAL — opções ─────────────────────────────── */}
+        <aside className="w-[380px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
+          <div className="flex items-center gap-1 p-3 border-b border-slate-100">
+            <button onClick={() => { setTab('activities'); cancelEdit() }}
+              className={cn('flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-colors', tab === 'activities' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>
+              Atividades
+            </button>
+            <button onClick={() => { setTab('contact'); cancelEdit() }}
+              className={cn('flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-colors', tab === 'contact' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>
+              Contacto
+            </button>
+          </div>
 
-        {tab === 'activities' ? <ActivitiesTab /> : <ContactTab />}
-      </main>
+          <div className="p-4">
+            {tab === 'activities' && (
+              editingId ? (
+                <div className="space-y-4">
+                  <button onClick={cancelEdit} className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                    <ArrowLeft className="w-3.5 h-3.5" /> Voltar à lista
+                  </button>
+                  <ActivityEditForm form={draftForm} onChange={setDraftForm} />
+                  <button onClick={() => saveActivity.mutate()} disabled={saveActivity.isPending}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50">
+                    {saveActivity.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Guardar
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <button onClick={startNew}
+                    className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-xs font-bold shadow-sm">
+                    <Plus className="w-3.5 h-3.5" /> Nova Atividade
+                  </button>
+                  <div className="space-y-2">
+                    {draftActivities.map(a => (
+                      <div key={a.id} className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                        <div className={cn('w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm shrink-0', a.color)}>{a.emoji}</div>
+                        <p className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate">{a.name}</p>
+                        <button onClick={() => toggleActive.mutate(a)} className={cn('p-1.5 rounded-lg shrink-0', a.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-slate-300 hover:bg-slate-100')}>
+                          {a.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        </button>
+                        <button onClick={() => startEdit(a)} className="p-1.5 text-slate-400 hover:text-orange-600 rounded-lg shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { if (confirm(`Eliminar "${a.name}"?`)) removeActivity.mutate(a.id) }} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+
+            {tab === 'contact' && (
+              <div className="space-y-3.5">
+                <div>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-1"><Phone className="w-3.5 h-3.5" /> Telefone (texto mostrado)</label>
+                  <input value={draftSettings.contact_phone || ''} onChange={e => setDraftSettings(s => ({ ...s, contact_phone: e.target.value }))} className={iCls} />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Número para ligar (com indicativo)</label>
+                  <input value={draftSettings.contact_phone_link || ''} onChange={e => setDraftSettings(s => ({ ...s, contact_phone_link: e.target.value }))} className={iCls} />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-1"><Mail className="w-3.5 h-3.5" /> Email</label>
+                  <input value={draftSettings.contact_email || ''} onChange={e => setDraftSettings(s => ({ ...s, contact_email: e.target.value }))} className={iCls} />
+                </div>
+                <div>
+                  <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-1"><MessageCircle className="w-3.5 h-3.5" /> WhatsApp (com indicativo)</label>
+                  <input value={draftSettings.whatsapp_number || ''} onChange={e => setDraftSettings(s => ({ ...s, whatsapp_number: e.target.value }))} className={iCls} />
+                </div>
+                <button onClick={() => saveSettings.mutate()} disabled={saveSettings.isPending}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50">
+                  {saveSettings.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Guardar
+                </button>
+              </div>
+            )}
+          </div>
+        </aside>
+
+        {/* ── PRÉ-VISUALIZAÇÃO AO VIVO ───────────────────────────── */}
+        <div className="flex-1 flex flex-col bg-slate-200 min-w-0">
+          <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shrink-0">
+            <p className="text-xs text-slate-400 font-medium">Pré-visualização — {SITE_URL.replace('https://', '')}</p>
+            <div className="flex items-center gap-1">
+              <button onClick={() => iframeRef.current?.contentWindow?.location.reload()} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Recarregar">
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+              <a href={SITE_URL} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Abrir site">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          </div>
+          <iframe
+            ref={iframeRef}
+            src={SITE_URL}
+            title="Pré-visualização do site"
+            className="flex-1 w-full border-0"
+            onLoad={() => broadcastPreview(iframeRef, { activities: previewActivities, settings: draftSettings })}
+          />
+        </div>
+      </div>
     </div>
   )
 }
