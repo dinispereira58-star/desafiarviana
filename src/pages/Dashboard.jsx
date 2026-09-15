@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Inbox, Clock, CheckCircle2, TrendingUp } from 'lucide-react'
+import { Inbox, Clock, CheckCircle2, TrendingUp, Users } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { ACTIVITY_MAP, BOOKING_STATUS_MAP } from '@/lib/constants'
+import { BOOKING_STATUS_MAP } from '@/lib/constants'
+import { useActivitiesMap } from '@/lib/useActivitiesMap'
 import { cn, formatDateTime } from '@/lib/utils'
 
 function KPICard({ icon: Icon, label, value, sub, tone }) {
@@ -19,6 +20,7 @@ function KPICard({ icon: Icon, label, value, sub, tone }) {
 }
 
 export default function Dashboard() {
+  const activityMap = useActivitiesMap()
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings'],
     queryFn: async () => {
@@ -35,9 +37,11 @@ export default function Dashboard() {
     const pending = bookings.filter(b => b.status === 'pending').length
     const confirmedThisWeek = bookings.filter(b => b.status === 'confirmed' && new Date(b.updated_at) >= weekAgo).length
     const thisMonth = bookings.filter(b => new Date(b.created_at) >= monthAgo)
-    const decided = bookings.filter(b => ['confirmed', 'declined', 'completed'].includes(b.status))
-    const confirmRate = decided.length ? Math.round((decided.filter(b => b.status !== 'declined').length / decided.length) * 100) : null
-    return { pending, confirmedThisWeek, monthTotal: thisMonth.length, confirmRate }
+    const decided = bookings.filter(b => ['confirmed', 'declined', 'completed', 'cancelled'].includes(b.status))
+    const confirmRate = decided.length ? Math.round((decided.filter(b => !['declined', 'cancelled'].includes(b.status)).length / decided.length) * 100) : null
+    const completed = bookings.filter(b => b.status === 'completed')
+    const totalPeople = completed.reduce((s, b) => s + (b.actual_participants ?? b.people_count ?? 0), 0)
+    return { pending, confirmedThisWeek, monthTotal: thisMonth.length, confirmRate, totalPeople }
   }, [bookings])
 
   const recent = bookings.slice(0, 8)
@@ -50,13 +54,14 @@ export default function Dashboard() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[1, 2, 3, 4].map(i => <div key={i} className="h-28 bg-white rounded-2xl border border-slate-100 animate-pulse" />)}</div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-28 bg-white rounded-2xl border border-slate-100 animate-pulse" />)}</div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <KPICard icon={Clock} label="Pedidos pendentes" value={stats.pending} tone="bg-amber-50 text-amber-600" />
           <KPICard icon={CheckCircle2} label="Confirmadas esta semana" value={stats.confirmedThisWeek} tone="bg-emerald-50 text-emerald-600" />
           <KPICard icon={Inbox} label="Pedidos (últimos 30 dias)" value={stats.monthTotal} tone="bg-orange-50 text-brand" />
           <KPICard icon={TrendingUp} label="Taxa de confirmação" value={stats.confirmRate !== null ? `${stats.confirmRate}%` : '—'} tone="bg-sky-50 text-sky-600" />
+          <KPICard icon={Users} label="Pessoas atendidas" value={stats.totalPeople} sub="atividades realizadas" tone="bg-pink-50 text-pink-600" />
         </div>
       )}
 
@@ -67,7 +72,7 @@ export default function Dashboard() {
         <div className="divide-y divide-slate-100">
           {recent.length === 0 && <p className="text-center text-sm text-slate-300 italic py-10">Sem pedidos ainda</p>}
           {recent.map(b => {
-            const activity = ACTIVITY_MAP[b.activity_id]
+            const activity = activityMap[b.activity_id]
             const status = BOOKING_STATUS_MAP[b.status]
             return (
               <div key={b.id} className="flex items-center gap-3 px-5 py-3">

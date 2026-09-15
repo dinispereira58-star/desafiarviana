@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Search, Phone, Mail, Calendar, Repeat, ChevronRight, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { ACTIVITY_MAP, BOOKING_STATUS_MAP } from '@/lib/constants'
+import { BOOKING_STATUS_MAP } from '@/lib/constants'
+import { useActivitiesMap } from '@/lib/useActivitiesMap'
 import { cn, formatDate, formatDateTime } from '@/lib/utils'
 
 // Não existe uma tabela de clientes própria — agregam-se a partir dos
@@ -34,6 +35,7 @@ function buildCustomers(bookings) {
 export default function Clientes() {
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState(null)
+  const activityMap = useActivitiesMap()
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['bookings'],
@@ -106,7 +108,7 @@ export default function Clientes() {
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-2.5">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Histórico de pedidos</p>
               {selected.bookings.map(b => {
-                const activity = ACTIVITY_MAP[b.activity_id]
+                const activity = activityMap[b.activity_id]
                 const status = BOOKING_STATUS_MAP[b.status]
                 return (
                   <div key={b.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-3.5 py-2.5">

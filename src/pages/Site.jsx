@@ -5,7 +5,8 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Save, Phone, Mail, MessageC
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { broadcastPreview } from '@/lib/broadcastPreview'
-import ActivityEditForm from '@/components/ActivityEditForm'
+import { useActivitiesList } from '@/lib/useActivitiesMap'
+import ActivitiesManager from '@/components/ActivitiesManager'
 import TestimonialEditForm from '@/components/TestimonialEditForm'
 import HeroEditForm from '@/components/HeroEditForm'
 
@@ -18,32 +19,18 @@ const SECTIONS = [
   { key: 'contact', label: 'Contacto' },
 ]
 
-function newActivityDraft() {
-  return {
-    id: '', name: 'Nova atividade', tagline: '', emoji: '🎯', description: '', color: 'from-orange-500 to-red-600', photo_url: null,
-    calculator_type: 'people', min_people: 6, price_per_person: 10,
-    ball_packages: [], items: [], is_active: true, position: 999,
-  }
-}
 function newTestimonialDraft() {
   return { id: null, name: '', activity: '', rating: 5, text: '', is_active: true, position: 999 }
-}
-function slugify(s) {
-  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
 
 export default function Site() {
   const qc = useQueryClient()
   const iframeRef = useRef()
   const [section, setSection] = useState('hero')
-  const [editingActivityId, setEditingActivityId] = useState(null)
   const [editingTestimonialId, setEditingTestimonialId] = useState(null) // 'NEW' ou id
 
   // ── Dados guardados ──────────────────────────────────────────────
-  const { data: activities = [] } = useQuery({
-    queryKey: ['activities'],
-    queryFn: async () => { const { data, error } = await supabase.from('activities').select('*').order('position', { ascending: true }); if (error) throw error; return data || [] },
-  })
+  const { data: activities = [] } = useActivitiesList()
   const { data: settings } = useQuery({
     queryKey: ['site-settings'],
     queryFn: async () => {
@@ -58,21 +45,14 @@ export default function Site() {
   })
 
   // ── Rascunhos (o que é transmitido para a pré-visualização) ───────
-  const [draftActivities, setDraftActivities] = useState([])
+  const [previewActivities, setPreviewActivities] = useState([])
   const [draftSettings, setDraftSettings] = useState({})
   const [draftTestimonials, setDraftTestimonials] = useState([])
-  const [activityForm, setActivityForm] = useState(null)
   const [testimonialForm, setTestimonialForm] = useState(null)
 
-  useEffect(() => { setDraftActivities(activities) }, [activities])
+  useEffect(() => { setPreviewActivities(activities) }, [activities])
   useEffect(() => { if (settings) setDraftSettings(settings) }, [settings])
   useEffect(() => { setDraftTestimonials(testimonials) }, [testimonials])
-
-  const previewActivities = useMemo(() => {
-    if (!activityForm) return draftActivities
-    if (editingActivityId === 'NEW') return [...draftActivities, { ...activityForm, id: activityForm.id || slugify(activityForm.name) || 'preview-nova' }]
-    return draftActivities.map(a => a.id === editingActivityId ? { ...a, ...activityForm } : a)
-  }, [draftActivities, activityForm, editingActivityId])
 
   const previewTestimonials = useMemo(() => {
     if (!testimonialForm) return draftTestimonials
@@ -83,30 +63,6 @@ export default function Site() {
   useEffect(() => {
     broadcastPreview(iframeRef, { activities: previewActivities, settings: draftSettings, testimonials: previewTestimonials })
   }, [previewActivities, draftSettings, previewTestimonials])
-
-  // ── Atividades ─────────────────────────────────────────────────
-  const startEditActivity = (a) => { setEditingActivityId(a.id); setActivityForm({ ...a }) }
-  const startNewActivity = () => { setEditingActivityId('NEW'); setActivityForm(newActivityDraft()) }
-  const cancelActivity = () => { setEditingActivityId(null); setActivityForm(null) }
-
-  const saveActivity = useMutation({
-    mutationFn: async () => {
-      const id = editingActivityId === 'NEW' ? (slugify(activityForm.name) || `atividade-${Date.now()}`) : editingActivityId
-      const { error } = await supabase.from('activities').upsert({ ...activityForm, id, updated_at: new Date().toISOString() })
-      if (error) throw error
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities'] }); toast.success('Guardado!'); cancelActivity() },
-    onError: e => toast.error('Erro: ' + e.message),
-  })
-  const toggleActivityActive = useMutation({
-    mutationFn: async (a) => { const { error } = await supabase.from('activities').update({ is_active: !a.is_active }).eq('id', a.id); if (error) throw error },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['activities'] }),
-  })
-  const removeActivity = useMutation({
-    mutationFn: async (id) => { const { error } = await supabase.from('activities').delete().eq('id', id); if (error) throw error },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities'] }); toast.success('Eliminada') },
-    onError: e => toast.error('Erro: ' + e.message),
-  })
 
   // ── Testemunhos ────────────────────────────────────────────────
   const startEditTestimonial = (t) => { setEditingTestimonialId(t.id); setTestimonialForm({ ...t }) }
@@ -156,7 +112,7 @@ export default function Site() {
         <aside className="w-[380px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto flex flex-col">
           <div className="flex flex-col gap-0.5 p-3 border-b border-slate-100">
             {SECTIONS.map(s => (
-              <button key={s.key} onClick={() => { setSection(s.key); cancelActivity(); cancelTestimonial() }}
+              <button key={s.key} onClick={() => { setSection(s.key); cancelTestimonial() }}
                 className={cn('px-3 py-2 rounded-lg text-xs font-bold text-left transition-colors', section === s.key ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>
                 {s.label}
               </button>
@@ -175,43 +131,7 @@ export default function Site() {
               </div>
             )}
 
-            {section === 'activities' && (
-              editingActivityId ? (
-                <div className="space-y-4">
-                  <button onClick={cancelActivity} className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
-                    <ArrowLeft className="w-3.5 h-3.5" /> Voltar à lista
-                  </button>
-                  <ActivityEditForm form={activityForm} onChange={setActivityForm} />
-                  <button onClick={() => saveActivity.mutate()} disabled={saveActivity.isPending}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50">
-                    {saveActivity.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Guardar
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <button onClick={startNewActivity}
-                    className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-xs font-bold shadow-sm">
-                    <Plus className="w-3.5 h-3.5" /> Nova Atividade
-                  </button>
-                  <div className="space-y-2">
-                    {draftActivities.map(a => (
-                      <div key={a.id} className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
-                        {a.photo_url ? <img src={a.photo_url} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" /> : (
-                          <div className={cn('w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm shrink-0', a.color)}>{a.emoji}</div>
-                        )}
-                        <p className="flex-1 min-w-0 text-sm font-semibold text-slate-800 truncate">{a.name}</p>
-                        <button onClick={() => toggleActivityActive.mutate(a)} className={cn('p-1.5 rounded-lg shrink-0', a.is_active ? 'text-emerald-500 hover:bg-emerald-50' : 'text-slate-300 hover:bg-slate-100')}>
-                          {a.is_active ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        </button>
-                        <button onClick={() => startEditActivity(a)} className="p-1.5 text-slate-400 hover:text-orange-600 rounded-lg shrink-0"><Pencil className="w-3.5 h-3.5" /></button>
-                        <button onClick={() => { if (confirm(`Eliminar "${a.name}"?`)) removeActivity.mutate(a.id) }} className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            )}
+            {section === 'activities' && <ActivitiesManager onDraftChange={setPreviewActivities} />}
 
             {section === 'testimonials' && (
               editingTestimonialId ? (

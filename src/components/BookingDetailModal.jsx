@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { X, Loader2, Phone, Mail, Calendar, Users, MessageSquare, Trash2 } from 'lucide-react'
+import { X, Loader2, Phone, Mail, Calendar, Clock, Users, MessageSquare, Trash2, Euro, Package } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { ACTIVITY_MAP, BOOKING_STATUSES } from '@/lib/constants'
+import { BOOKING_STATUSES } from '@/lib/constants'
+import { useActivitiesMap } from '@/lib/useActivitiesMap'
 import { formatDate, formatDateTime } from '@/lib/utils'
 
 const selCls = 'px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold bg-white focus:outline-none focus:border-orange-400 transition-colors'
+const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 
 export default function BookingDetailModal({ bookingId, onClose }) {
   const qc = useQueryClient()
+  const activityMap = useActivitiesMap()
   const [notes, setNotes] = useState('')
+  const [participants, setParticipants] = useState('')
+  const [revenue, setRevenue] = useState('')
+  const [extra, setExtra] = useState({})
 
   const { data: booking, isLoading } = useQuery({
     queryKey: ['booking', bookingId],
@@ -21,7 +27,13 @@ export default function BookingDetailModal({ bookingId, onClose }) {
     },
   })
 
-  useEffect(() => { if (booking) setNotes(booking.internal_notes || '') }, [booking])
+  useEffect(() => {
+    if (!booking) return
+    setNotes(booking.internal_notes || '')
+    setParticipants(booking.actual_participants ?? booking.people_count ?? '')
+    setRevenue(booking.revenue ?? '')
+    setExtra(booking.extra_data || {})
+  }, [booking])
 
   const update = useMutation({
     mutationFn: async (fields) => {
@@ -41,7 +53,12 @@ export default function BookingDetailModal({ bookingId, onClose }) {
     onError: e => toast.error('Erro: ' + e.message),
   })
 
-  const activity = booking ? ACTIVITY_MAP[booking.activity_id] : null
+  const activity = booking ? activityMap[booking.activity_id] : null
+  const isPaintball = booking?.activity_id === 'paintball'
+  const setExtraField = (k, v) => {
+    const next = { ...extra, [k]: v }
+    setExtra(next)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4" onClick={onClose}>
@@ -52,7 +69,11 @@ export default function BookingDetailModal({ bookingId, onClose }) {
           <>
             <div className="flex items-start justify-between gap-3 px-6 py-5 border-b border-slate-100">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-xl shrink-0">{activity?.emoji || '📋'}</div>
+                {activity?.photo_url ? (
+                  <img src={activity.photo_url} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                ) : (
+                  <div className="w-11 h-11 rounded-xl bg-orange-50 flex items-center justify-center text-xl shrink-0">{activity?.emoji || '📋'}</div>
+                )}
                 <div>
                   <h2 className="text-lg font-display font-bold text-slate-800">{booking.name}</h2>
                   <p className="text-xs text-slate-400">{booking.activity_name || activity?.name}</p>
@@ -77,22 +98,73 @@ export default function BookingDetailModal({ bookingId, onClose }) {
                     <Mail className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-700 font-medium truncate">{booking.email}</span>
                   </a>
                 )}
-                {booking.preferred_date && (
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3.5 py-2.5">
-                    <Calendar className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-700 font-medium">{formatDate(booking.preferred_date)}</span>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Data e hora</p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="relative">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input type="date" defaultValue={booking.preferred_date || ''} onBlur={e => update.mutate({ preferred_date: e.target.value || null })} className={iCls + ' pl-9'} />
                   </div>
-                )}
-                {booking.people_count && (
-                  <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-3.5 py-2.5">
-                    <Users className="w-3.5 h-3.5 text-slate-400" /><span className="text-slate-700 font-medium">{booking.people_count} pessoas</span>
+                  <div className="relative">
+                    <Clock className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input type="time" defaultValue={booking.preferred_time || ''} onBlur={e => update.mutate({ preferred_time: e.target.value || null })} className={iCls + ' pl-9'} />
                   </div>
-                )}
+                </div>
               </div>
 
               {booking.message && (
                 <div>
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Mensagem do cliente</p>
                   <p className="text-sm text-slate-600 bg-slate-50 rounded-xl px-3.5 py-3 whitespace-pre-wrap leading-relaxed">{booking.message}</p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Resultado</p>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="relative">
+                    <Users className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input type="number" min="0" placeholder="Participantes" value={participants} onChange={e => setParticipants(e.target.value)}
+                      onBlur={() => update.mutate({ actual_participants: participants === '' ? null : Number(participants) })}
+                      className={iCls + ' pl-9'} />
+                  </div>
+                  <div className="relative">
+                    <Euro className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input type="number" min="0" step="0.5" placeholder="Ganho (€)" value={revenue} onChange={e => setRevenue(e.target.value)}
+                      onBlur={() => update.mutate({ revenue: revenue === '' ? null : Number(revenue) })}
+                      className={iCls + ' pl-9'} />
+                  </div>
+                </div>
+              </div>
+
+              {isPaintball && (
+                <div>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Package className="w-3.5 h-3.5 text-slate-400" />
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Consumíveis — Paintball</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {[['pack_200', 'Pack 200'], ['pack_300', 'Pack 300'], ['pack_400', 'Pack 400']].map(([k, label]) => (
+                      <div key={k}>
+                        <label className="block text-[10px] font-semibold text-slate-500 mb-1">{label}</label>
+                        <input type="number" min="0" value={extra[k] ?? ''} onChange={e => setExtraField(k, e.target.value)}
+                          onBlur={() => update.mutate({ extra_data: { ...extra, [k]: extra[k] === '' || extra[k] == null ? null : Number(extra[k]) } })}
+                          className={iCls} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[['recargas', 'Recargas'], ['sacos', 'Sacos'], ['caixas', 'Caixas']].map(([k, label]) => (
+                      <div key={k}>
+                        <label className="block text-[10px] font-semibold text-slate-500 mb-1">{label}</label>
+                        <input type="number" min="0" value={extra[k] ?? ''} onChange={e => setExtraField(k, e.target.value)}
+                          onBlur={() => update.mutate({ extra_data: { ...extra, [k]: extra[k] === '' || extra[k] == null ? null : Number(extra[k]) } })}
+                          className={iCls} />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

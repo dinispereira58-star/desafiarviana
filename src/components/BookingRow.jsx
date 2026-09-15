@@ -1,9 +1,11 @@
 import { Calendar, Users, Check, X, ChevronRight } from 'lucide-react'
-import { ACTIVITY_MAP, BOOKING_STATUS_MAP } from '@/lib/constants'
+import { BOOKING_STATUS_MAP } from '@/lib/constants'
+import { useActivitiesMap } from '@/lib/useActivitiesMap'
 import { cn, formatDate } from '@/lib/utils'
 
 export default function BookingRow({ booking, onOpen, onQuickStatus }) {
-  const activity = ACTIVITY_MAP[booking.activity_id]
+  const activityMap = useActivitiesMap()
+  const activity = activityMap[booking.activity_id]
   const status = BOOKING_STATUS_MAP[booking.status]
 
   return (
@@ -22,7 +24,7 @@ export default function BookingRow({ booking, onOpen, onQuickStatus }) {
 
       <div className="hidden sm:flex items-center gap-3 text-[11px] text-slate-400 shrink-0">
         {booking.preferred_date && (
-          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(booking.preferred_date)}</span>
+          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{formatDate(booking.preferred_date)}{booking.preferred_time ? ` · ${booking.preferred_time}` : ''}</span>
         )}
         {booking.people_count && (
           <span className="flex items-center gap-1"><Users className="w-3 h-3" />{booking.people_count}</span>

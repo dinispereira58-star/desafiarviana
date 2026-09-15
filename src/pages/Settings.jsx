@@ -4,6 +4,8 @@ import { toast } from 'sonner'
 import { Save, Loader2, Upload, Compass } from 'lucide-react'
 import { supabase, uploadFile } from '@/lib/supabase'
 import { useCrmSettings, useInvalidateCrmSettings } from '@/lib/useCrmSettings'
+import { cn } from '@/lib/utils'
+import ActivitiesManager from '@/components/ActivitiesManager'
 
 const iCls = 'w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 const PALETTES = [
@@ -18,6 +20,7 @@ export default function Settings() {
   const settings = useCrmSettings()
   const invalidate = useInvalidateCrmSettings()
   const fileRef = useRef()
+  const [tab, setTab] = useState('geral')
   const [form, setForm] = useState(settings)
   const [uploading, setUploading] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -54,6 +57,17 @@ export default function Settings() {
     <div className="p-6 max-w-3xl mx-auto space-y-6">
       <h1 className="font-display font-bold text-slate-800 text-lg">Configurações</h1>
 
+      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
+        <button onClick={() => setTab('geral')} className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-colors', tab === 'geral' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>Geral</button>
+        <button onClick={() => setTab('activities')} className={cn('px-4 py-1.5 rounded-lg text-xs font-bold transition-colors', tab === 'activities' ? 'bg-slate-800 text-white' : 'text-slate-500 hover:bg-slate-50')}>Atividades</button>
+      </div>
+
+      {tab === 'activities' ? (
+        <section className="bg-white border border-slate-200 rounded-2xl p-6 max-w-lg">
+          <ActivitiesManager />
+        </section>
+      ) : (
+      <>
       <section className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
         <h2 className="font-display font-bold text-slate-700">Identidade</h2>
         <div>
@@ -134,6 +148,8 @@ export default function Settings() {
         {save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         Guardar Configurações
       </button>
+      </>
+      )}
     </div>
   )
 }
