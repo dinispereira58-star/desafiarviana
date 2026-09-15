@@ -5,7 +5,6 @@ import { Plus, Pencil, Trash2, Eye, EyeOff, Loader2, Save, Phone, Mail, MessageC
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { broadcastPreview } from '@/lib/broadcastPreview'
-import Header from '@/components/Header'
 import ActivityEditForm from '@/components/ActivityEditForm'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
@@ -108,9 +107,9 @@ export default function Site() {
   })
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <div className="flex-1 flex min-h-0">
+    <div className="p-6">
+      <h1 className="font-display font-bold text-slate-800 text-lg mb-4">Site Público</h1>
+      <div className="flex h-[calc(100vh-160px)] rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm">
         {/* ── BARRA LATERAL — opções ─────────────────────────────── */}
         <aside className="w-[380px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto">
           <div className="flex items-center gap-1 p-3 border-b border-slate-100">

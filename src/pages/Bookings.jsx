@@ -4,7 +4,6 @@ import { Inbox, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { BOOKING_STATUSES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
-import Header from '@/components/Header'
 import BookingRow from '@/components/BookingRow'
 import BookingDetailModal from '@/components/BookingDetailModal'
 
@@ -55,10 +54,9 @@ export default function Bookings() {
   const filtered = filter === 'all' ? bookings : bookings.filter(b => b.status === filter)
 
   return (
-    <div className="min-h-screen">
-      <Header />
-
+    <div>
       <main className="max-w-[1200px] mx-auto p-6 space-y-6">
+        <h1 className="font-display font-bold text-slate-800 text-lg">Pedidos de Marcação</h1>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard icon={Inbox} label="Total" value={stats.total} tone="bg-slate-100 text-slate-600" />
           <StatCard icon={Clock} label="Pendentes" value={stats.pending} tone="bg-amber-50 text-amber-600" />
