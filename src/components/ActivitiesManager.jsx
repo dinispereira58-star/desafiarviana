@@ -12,6 +12,7 @@ function newActivityDraft() {
     id: '', name: 'Nova atividade', tagline: '', emoji: '🎯', description: '', color: 'from-orange-500 to-red-600', photo_url: null,
     calculator_type: 'people', min_people: 6, price_per_person: 10,
     ball_packages: [], items: [], is_active: true, position: 999,
+    long_description: '', safety_rules: [], gallery: [], price_note: '',
   }
 }
 function slugify(s) {
