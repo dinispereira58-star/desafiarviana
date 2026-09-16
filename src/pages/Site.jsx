@@ -9,6 +9,7 @@ import { useActivitiesList } from '@/lib/useActivitiesMap'
 import ActivitiesManager from '@/components/ActivitiesManager'
 import TestimonialEditForm from '@/components/TestimonialEditForm'
 import HeroEditForm from '@/components/HeroEditForm'
+import PopupsManager from '@/components/PopupsManager'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://desafiarviana-site.vercel.app'
@@ -17,6 +18,7 @@ const SECTIONS = [
   { key: 'activities', label: 'Atividades' },
   { key: 'testimonials', label: 'Testemunhos' },
   { key: 'contact', label: 'Contacto' },
+  { key: 'popups', label: 'Popups & Avisos' },
 ]
 
 function newTestimonialDraft() {
@@ -132,6 +134,8 @@ export default function Site() {
             )}
 
             {section === 'activities' && <ActivitiesManager onDraftChange={setPreviewActivities} />}
+
+            {section === 'popups' && <PopupsManager />}
 
             {section === 'testimonials' && (
               editingTestimonialId ? (
