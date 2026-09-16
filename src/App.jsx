@@ -31,7 +31,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/" element={<Navigate to="/Dashboard" replace />} />
+      <Route path="/Dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/Bookings" element={<ProtectedRoute><Bookings /></ProtectedRoute>} />
       <Route path="/Clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
       <Route path="/Calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
