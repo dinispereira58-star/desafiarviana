@@ -84,6 +84,9 @@ function PreviewMock({ form }) {
   )
 }
 
+// Tamanhos do popup do centro (largura em px).
+const MODAL_SIZES = [{ label: 'Pequeno', w: 360 }, { label: 'Médio', w: 448 }, { label: 'Grande', w: 640 }, { label: 'Muito grande', w: 860 }]
+
 export default function PopupEditForm({ form, onChange }) {
   const set = (k, v) => onChange({ ...form, [k]: v })
   const fileRef = useRef()
@@ -202,6 +205,24 @@ export default function PopupEditForm({ form, onChange }) {
             </select>
           </Field>
         </div>
+        {form.kind === 'modal' && (() => {
+          // Largura do popup (guardada em corner_width; 320 = valor antigo por omissão → Médio, 448).
+          const w = !form.corner_width || form.corner_width === 320 ? 448 : form.corner_width
+          return (
+            <Field label={`Tamanho do popup — ${w}px de largura`}>
+              <div className="grid grid-cols-4 gap-1.5 mb-2">
+                {MODAL_SIZES.map(z => (
+                  <button key={z.w} type="button" onClick={() => set('corner_width', z.w)}
+                    className={`px-2 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors ${w === z.w ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-slate-600 border-slate-200 hover:border-orange-300'}`}>
+                    {z.label}
+                  </button>
+                ))}
+              </div>
+              <input type="range" min={300} max={1000} step={10} value={w} onChange={e => set('corner_width', Number(e.target.value))} className="w-full accent-orange-500" />
+              <p className="text-[10px] text-slate-400 mt-1">No telemóvel ocupa no máximo a largura do ecrã.</p>
+            </Field>
+          )
+        })()}
         {form.kind === 'bar' && (
           <Field label={`Altura da barra — ${form.bar_size}px`}>
             <input type="range" min={36} max={96} value={form.bar_size} onChange={e => set('bar_size', Number(e.target.value))} className="w-full accent-orange-500" />

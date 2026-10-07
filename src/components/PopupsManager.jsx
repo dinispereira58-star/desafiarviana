@@ -14,7 +14,7 @@ function newPopupDraft() {
     name: 'Novo aviso', is_active: true, kind: 'modal', position: 'center',
     content_type: 'text', title: '', message: '', image_url: '', link_url: '', link_label: '',
     bg_color: '#1a1a1a', text_color: '#ffffff', accent_color: '#ff6a00',
-    font_family: '', text_size: 'md', bar_size: 48, corner_width: 320,
+    font_family: '', text_size: 'md', bar_size: 48, corner_width: 448,
     close_mode: 'both', auto_close_seconds: 6, animation: 'fade', display_order: 0,
   }
 }
@@ -45,7 +45,12 @@ export default function PopupsManager() {
   const cancel = () => { setEditingId(null); setForm(null) }
 
   const handleFormChange = (next) => {
-    if (next.kind !== form.kind) next.position = positionForKind(next.kind)
+    if (next.kind !== form.kind) {
+      next.position = positionForKind(next.kind)
+      // Largura por omissão de cada tipo (popup do centro: Médio; caixa de canto: 320).
+      if (next.kind === 'modal' && next.corner_width === 320) next.corner_width = 448
+      if (next.kind === 'corner' && next.corner_width > 420) next.corner_width = 320
+    }
     setForm(next)
   }
 
