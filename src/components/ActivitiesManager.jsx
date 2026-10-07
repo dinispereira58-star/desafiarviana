@@ -22,7 +22,7 @@ function slugify(s) {
 // Gestão de atividades — reutilizada em Site > Atividades (com
 // pré-visualização em tempo real, via onDraftChange) e em Configurações >
 // Atividades (sem pré-visualização, só gestão direta).
-export default function ActivitiesManager({ onDraftChange }) {
+export default function ActivitiesManager({ onDraftChange, onEditingChange }) {
   const qc = useQueryClient()
   const { data: activities = [] } = useActivitiesList()
   const [draftActivities, setDraftActivities] = useState([])
@@ -38,6 +38,8 @@ export default function ActivitiesManager({ onDraftChange }) {
   }, [draftActivities, form, editingId])
 
   useEffect(() => { onDraftChange?.(previewActivities) }, [previewActivities]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A pré-visualização abre a página da atividade que está a ser editada.
+  useEffect(() => { onEditingChange?.(editingId && editingId !== 'NEW' ? editingId : null) }, [editingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startEdit = (a) => { setEditingId(a.id); setForm({ ...a }) }
   const startNew = () => { setEditingId('NEW'); setForm(newActivityDraft()) }

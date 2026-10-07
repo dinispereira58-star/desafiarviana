@@ -56,6 +56,8 @@ export default function Site() {
 
   // ── Rascunhos (o que é transmitido para a pré-visualização) ───────
   const [previewActivities, setPreviewActivities] = useState([])
+  const [previewActivityId, setPreviewActivityId] = useState(null)   // atividade em edição → a pré-visualização mostra a página dela
+  const previewUrl = section === 'activities' && previewActivityId ? `${SITE_URL}/atividades/${previewActivityId}` : SITE_URL
   const [draftSettings, setDraftSettings] = useState({})
   const [draftTestimonials, setDraftTestimonials] = useState([])
   const [testimonialForm, setTestimonialForm] = useState(null)
@@ -165,7 +167,7 @@ export default function Site() {
               </div>
             )}
 
-            {section === 'activities' && <ActivitiesManager onDraftChange={setPreviewActivities} />}
+            {section === 'activities' && <ActivitiesManager onDraftChange={setPreviewActivities} onEditingChange={setPreviewActivityId} />}
 
             {section === 'popups' && <PopupsManager />}
 
@@ -348,19 +350,19 @@ export default function Site() {
         {/* ── PRÉ-VISUALIZAÇÃO AO VIVO ───────────────────────────── */}
         <div className="flex-1 flex flex-col bg-slate-200 min-w-0">
           <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-slate-200 shrink-0">
-            <p className="text-xs text-slate-400 font-medium">Pré-visualização — {SITE_URL.replace('https://', '')}</p>
+            <p className="text-xs text-slate-400 font-medium">Pré-visualização — {previewUrl.replace('https://', '')}</p>
             <div className="flex items-center gap-1">
               <button onClick={() => iframeRef.current?.contentWindow?.location.reload()} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Recarregar">
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
-              <a href={SITE_URL} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Abrir site">
+              <a href={previewUrl} target="_blank" rel="noreferrer" className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Abrir site">
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
           <iframe
             ref={iframeRef}
-            src={SITE_URL}
+            src={previewUrl}
             title="Pré-visualização do site"
             className="flex-1 w-full border-0"
             onLoad={() => broadcastPreview(iframeRef, { activities: previewActivities, settings: draftSettings, testimonials: previewTestimonials })}

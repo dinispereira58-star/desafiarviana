@@ -80,11 +80,56 @@ export default function ActivityEditForm({ form, onChange }) {
         </div>
       </div>
       <div>
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Frase curta</label>
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Frase curta <span className="font-normal text-slate-400">— por baixo do nome, no cartão e no topo da página</span></label>
         <input value={form.tagline || ''} onChange={e => set('tagline', e.target.value)} className={iCls} />
       </div>
-      <div>
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Descrição</label>
+
+      <div className="rounded-xl border border-orange-200 bg-orange-50/40 p-3">
+        <p className="text-[11px] font-bold text-orange-700 uppercase tracking-wider">Página da atividade</p>
+        <p className="text-[10px] text-slate-400 mb-2.5">Os textos da página {form.id ? <b>/atividades/{form.id}</b> : 'desta atividade'} no site</p>
+
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1">«Sobre a atividade» — texto principal da página</label>
+        <textarea rows={7} value={form.long_description || ''} onChange={e => set('long_description', e.target.value)}
+          placeholder={form.description ? `Vazio: a página mostra a descrição curta («${form.description.slice(0, 60)}…»)` : 'Texto mais longo a explicar a atividade, mostrado na página dedicada...'}
+          className={iCls + ' resize-y'} />
+
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">«Segurança» — regras (uma por linha)</label>
+        <div className="space-y-1.5">
+          {(form.safety_rules || []).map((rule, i) => (
+            <div key={i} className="flex gap-1.5 items-center">
+              <input value={rule} onChange={e => updateSafetyRule(i, e.target.value)} placeholder="Ex: Equipamento de proteção obrigatório" className={iCls} />
+              <button type="button" onClick={() => removeSafetyRule(i)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={addSafetyRule} className="flex items-center gap-1 text-xs font-semibold text-orange-600 mt-1.5"><Plus className="w-3 h-3" /> Adicionar regra</button>
+
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">Nota por baixo dos preços</label>
+        <input value={form.price_note || ''} onChange={e => set('price_note', e.target.value)}
+          placeholder="Ex: Preço sob consulta / +5€ por criança extra"
+          className={iCls} />
+
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">«Galeria» — fotos</label>
+        <div className="grid grid-cols-4 gap-2 mb-2">
+          {(form.gallery || []).map((url, i) => (
+            <div key={i} className="relative aspect-square">
+              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200" />
+              <button type="button" onClick={() => removeGalleryImage(i)} className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-rose-500 text-white rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={() => galleryRef.current?.click()} disabled={uploadingGallery}
+          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-600 disabled:opacity-50">
+          {uploadingGallery ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+          Adicionar foto
+        </button>
+        <input ref={galleryRef} type="file" accept="image/*" onChange={handleGalleryUpload} className="hidden" />
+      </div>
+
+
+      <div className="rounded-xl border border-slate-200 p-3">
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2.5">Cartão na página inicial</p>
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Descrição curta <span className="font-normal text-slate-400">— texto do cartão em «Serviços»</span></label>
         <textarea rows={3} value={form.description || ''} onChange={e => set('description', e.target.value)} className={iCls + ' resize-none'} />
       </div>
       <div>
@@ -166,47 +211,6 @@ export default function ActivityEditForm({ form, onChange }) {
           <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-semibold text-orange-600"><Plus className="w-3 h-3" /> Adicionar item</button>
         </div>
       )}
-
-      <div className="pt-2 mt-1 border-t border-slate-100">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">Página da atividade (site)</p>
-
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Descrição completa</label>
-        <textarea rows={4} value={form.long_description || ''} onChange={e => set('long_description', e.target.value)}
-          placeholder="Texto mais longo a explicar a atividade, mostrado na página dedicada..."
-          className={iCls + ' resize-none'} />
-
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">Regras de segurança</label>
-        <div className="space-y-1.5">
-          {(form.safety_rules || []).map((rule, i) => (
-            <div key={i} className="flex gap-1.5 items-center">
-              <input value={rule} onChange={e => updateSafetyRule(i, e.target.value)} placeholder="Ex: Equipamento de proteção obrigatório" className={iCls} />
-              <button type="button" onClick={() => removeSafetyRule(i)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
-        </div>
-        <button type="button" onClick={addSafetyRule} className="flex items-center gap-1 text-xs font-semibold text-orange-600 mt-1.5"><Plus className="w-3 h-3" /> Adicionar regra</button>
-
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">Nota de preço (texto livre)</label>
-        <input value={form.price_note || ''} onChange={e => set('price_note', e.target.value)}
-          placeholder="Ex: Preço sob consulta / +5€ por criança extra"
-          className={iCls} />
-
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1 mt-3">Galeria de fotos</label>
-        <div className="grid grid-cols-4 gap-2 mb-2">
-          {(form.gallery || []).map((url, i) => (
-            <div key={i} className="relative aspect-square">
-              <img src={url} alt="" className="w-full h-full object-cover rounded-lg border border-slate-200" />
-              <button type="button" onClick={() => removeGalleryImage(i)} className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-rose-500 text-white rounded-full flex items-center justify-center"><X className="w-3 h-3" /></button>
-            </div>
-          ))}
-        </div>
-        <button type="button" onClick={() => galleryRef.current?.click()} disabled={uploadingGallery}
-          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-semibold text-slate-600 disabled:opacity-50">
-          {uploadingGallery ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-          Adicionar foto
-        </button>
-        <input ref={galleryRef} type="file" accept="image/*" onChange={handleGalleryUpload} className="hidden" />
-      </div>
 
       <label className="flex items-center gap-2 pt-1">
         <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 accent-orange-500" />
