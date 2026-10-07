@@ -69,8 +69,15 @@ export default function PopupsManager() {
     onError: e => toast.error('Erro: ' + e.message),
   })
   const toggleActive = useMutation({
-    mutationFn: async (p) => { const { error } = await supabase.from('site_popups').update({ is_active: !p.is_active }).eq('id', p.id); if (error) throw error },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['site-popups'] }),
+    mutationFn: async (p) => {
+      // .select() confirma que a linha foi mesmo alterada (sem permissão, o Supabase não dá erro — só não altera nada).
+      const { data, error } = await supabase.from('site_popups').update({ is_active: !p.is_active }).eq('id', p.id).select('id, is_active')
+      if (error) throw error
+      if (!data?.length) throw new Error('não foi possível gravar (sem permissão)')
+      return data[0]
+    },
+    onSuccess: (row) => { qc.invalidateQueries({ queryKey: ['site-popups'] }); toast.success(row.is_active ? 'Aviso ligado — já aparece no site' : 'Aviso desligado') },
+    onError: e => { qc.invalidateQueries({ queryKey: ['site-popups'] }); toast.error('Erro ao ligar/desligar o aviso: ' + e.message) },
   })
   const remove = useMutation({
     mutationFn: async (id) => { const { error } = await supabase.from('site_popups').delete().eq('id', id); if (error) throw error },
