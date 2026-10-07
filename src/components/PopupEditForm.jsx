@@ -104,9 +104,11 @@ export default function PopupEditForm({ form, onChange }) {
         <input value={form.name || ''} onChange={e => set('name', e.target.value)} className={iCls} />
       </Field>
 
-      <label className="flex items-center gap-2">
-        <input type="checkbox" checked={!!form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 accent-orange-500" />
-        <span className="text-xs text-slate-600 font-medium">Ativo no site</span>
+      <label className={'flex items-center gap-2.5 rounded-xl px-3 py-2.5 ring-1 cursor-pointer ' + (form.is_active ? 'bg-emerald-50 ring-emerald-200' : 'bg-amber-50 ring-amber-200')}>
+        <input type="checkbox" checked={!!form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 accent-emerald-600" />
+        <span className="text-xs font-semibold">
+          <span className={form.is_active ? 'text-emerald-800' : 'text-amber-800'}>{form.is_active ? 'Mostrar no site — ligado' : 'Desligado — não aparece no site'}</span>
+        </span>
       </label>
 
       <div className="border-t border-slate-100 pt-3.5">
