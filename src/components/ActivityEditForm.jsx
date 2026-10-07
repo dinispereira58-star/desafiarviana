@@ -212,6 +212,27 @@ export default function ActivityEditForm({ form, onChange }) {
         </div>
       )}
 
+      {/* Desconto: aparece no site (cartão, página da atividade e simulador). */}
+      <div className="rounded-xl border border-pink-200 bg-pink-50/40 p-3">
+        <p className="text-[11px] font-bold text-pink-700 uppercase tracking-wider mb-2">Desconto</p>
+        <div className="grid grid-cols-[90px_1fr] gap-2.5">
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Percentagem</label>
+            <div className="relative">
+              <input type="number" min={0} max={90} step={1} value={form.discount_pct ?? 0}
+                onChange={e => set('discount_pct', Math.min(90, Math.max(0, Number(e.target.value) || 0)))} className={iCls + ' pr-6'} />
+              <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-500 mb-1">Texto (opcional)</label>
+            <input value={form.discount_label || ''} onChange={e => set('discount_label', e.target.value)} maxLength={40}
+              placeholder="Ex.: Promoção de Outono" className={iCls} />
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-400 mt-1.5">{Number(form.discount_pct) > 0 ? `No site: preços riscados e -${form.discount_pct}% em todos os preços desta atividade.` : 'Com 0% não aparece desconto no site.'}</p>
+      </div>
+
       <label className="flex items-center gap-2 pt-1">
         <input type="checkbox" checked={form.is_active} onChange={e => set('is_active', e.target.checked)} className="w-4 h-4 accent-orange-500" />
         <span className="text-xs text-slate-600 font-medium">Visível no site</span>
