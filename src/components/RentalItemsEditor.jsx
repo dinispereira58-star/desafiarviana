@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Plus, Trash2, Upload, Loader2, X, Pencil, ArrowLeft, ChevronUp, ChevronDown, Ruler } from 'lucide-react'
 import { uploadFile } from '@/lib/supabase'
+import RentalCombosEditor from '@/components/RentalCombosEditor'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 
@@ -10,7 +11,7 @@ export const RENTAL_CATEGORIES = [
   { key: 'trampolim', label: 'Trampolins', singular: 'trampolim', emoji: '🤸' },
 ]
 // Itens antigos (sem tipo): trampolins/camas elásticas pelo nome, o resto insuflável (igual ao site).
-export const itemCategory = it => it.category || (/trampol|cama.*el[aá]stic/i.test(it.name || '') ? 'trampolim' : 'insuflavel')
+export const itemCategory = it => it.kind === 'combo' ? 'combo' : it.category || (/trampol|cama.*el[aá]stic/i.test(it.name || '') ? 'trampolim' : 'insuflavel')
 
 function newItem(category) {
   const c = RENTAL_CATEGORIES.find(x => x.key === category)
@@ -90,6 +91,10 @@ export default function RentalItemsEditor({ items = [], onChange, activityId, on
           </div>
         )
       })}
+      <div className="pt-2 border-t border-slate-200">
+        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">🎁 Conjugações <span className="text-slate-300 font-semibold">({items.filter(it => it.kind === 'combo').length})</span></p>
+        <RentalCombosEditor items={items} onChange={onChange} />
+      </div>
       <p className="text-[10px] text-slate-400">Cada item tem um cartão na página {activityId ? <b>/atividades/{activityId}</b> : 'dos alugueres'} e uma página própria. As regras de segurança são as da atividade e aparecem em todas.</p>
     </div>
   )

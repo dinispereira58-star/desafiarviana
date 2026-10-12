@@ -16,17 +16,25 @@ function newActivityDraft() {
   }
 }
 // Itens de aluguer novos (id "novo-…"): o endereço da página passa a ser o nome (único).
+// As conjugações que os incluem passam a apontar para o endereço novo; as que
+// apontam para equipamentos já eliminados perdem essas referências.
 function finalizeItems(items) {
   if (!Array.isArray(items)) return items
   const used = new Set(items.filter(it => !String(it.id).startsWith('novo-')).map(it => String(it.id)))
-  return items.map(it => {
+  const renamed = {}
+  const out = items.map(it => {
     if (!String(it.id).startsWith('novo-')) return it
     const base = slugify(it.name) || 'item'
     let id = base
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`
     used.add(id)
+    renamed[it.id] = id
     return { ...it, id }
   })
+  const alive = new Set(out.filter(it => it.kind !== 'combo').map(it => String(it.id)))
+  return out.map(it => (it.kind === 'combo'
+    ? { ...it, parts: (it.parts || []).map(id => renamed[id] ?? id).filter(id => alive.has(String(id))) }
+    : it))
 }
 function slugify(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
