@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Plus, Trash2, Upload, Loader2, X, Pencil, ArrowLeft, ChevronUp, ChevronDown, Ruler } from 'lucide-react'
 import { uploadFile } from '@/lib/supabase'
 import RentalCombosEditor from '@/components/RentalCombosEditor'
+import ImagePositioner from '@/components/ImagePositioner'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 
@@ -228,6 +229,12 @@ function ItemForm({ item, set, activityId, onBack, onRemove }) {
           </button>
           <input ref={photoRef} type="file" accept="image/*" onChange={e => upload(e, 'photo')} className="hidden" />
         </div>
+        {item.photo_url && (
+          <div className="mt-2.5">
+            <ImagePositioner url={item.photo_url} onChange={v => set({ photo_url: v })}
+              frames={[{ label: 'Cartão', ratio: 1.77 }, { label: 'Miniatura', ratio: 1 }, { label: 'Página', ratio: 2.3 }]} />
+          </div>
+        )}
       </div>
 
       <div>

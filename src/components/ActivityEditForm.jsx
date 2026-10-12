@@ -3,6 +3,7 @@ import { Plus, Trash2, Upload, Loader2, X } from 'lucide-react'
 import { uploadFile } from '@/lib/supabase'
 import RentalItemsEditor from '@/components/RentalItemsEditor'
 import PacksEditor from '@/components/PacksEditor'
+import ImagePositioner from '@/components/ImagePositioner'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 const CALC_TYPES = [
@@ -145,6 +146,12 @@ export default function ActivityEditForm({ form, onChange, onEditingItem }) {
           </button>
           <input ref={fileRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
         </div>
+        {form.photo_url && (
+          <div className="mt-2.5">
+            <ImagePositioner url={form.photo_url} onChange={v => set('photo_url', v)} defaultY={0}
+              frames={[{ label: 'Cartão', ratio: 1.65 }, { label: 'Galeria', ratio: 1 }, { label: 'Topo da página', ratio: 2.4 }]} />
+          </div>
+        )}
       </div>
       <div>
         <label className="block text-[11px] font-semibold text-slate-500 mb-1">Cor</label>
