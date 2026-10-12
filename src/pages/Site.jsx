@@ -56,7 +56,7 @@ export default function Site() {
 
   // ── Rascunhos (o que é transmitido para a pré-visualização) ───────
   const [previewActivities, setPreviewActivities] = useState([])
-  const [previewActivityId, setPreviewActivityId] = useState(null)   // atividade em edição → a pré-visualização mostra a página dela
+  const [previewActivityId, setPreviewActivityId] = useState(null)   // atividade (ou "atividade/item" de aluguer) em edição → a pré-visualização mostra a página dela
   const previewUrl = section === 'activities' && previewActivityId ? `${SITE_URL}/atividades/${previewActivityId}` : SITE_URL
   const [draftSettings, setDraftSettings] = useState({})
   const [draftTestimonials, setDraftTestimonials] = useState([])

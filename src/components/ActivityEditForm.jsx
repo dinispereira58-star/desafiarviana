@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Plus, Trash2, Upload, Loader2, X } from 'lucide-react'
 import { uploadFile } from '@/lib/supabase'
+import RentalItemsEditor from '@/components/RentalItemsEditor'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 const CALC_TYPES = [
@@ -17,7 +18,7 @@ const COLORS = [
 // na barra lateral, para as alterações poderem ser transmitidas em tempo
 // real para a pré-visualização assim que o campo muda (sem esperar por
 // "Guardar").
-export default function ActivityEditForm({ form, onChange }) {
+export default function ActivityEditForm({ form, onChange, onEditingItem }) {
   const set = (k, v) => onChange({ ...form, [k]: v })
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
@@ -58,14 +59,6 @@ export default function ActivityEditForm({ form, onChange }) {
     set('ball_packages', next)
   }
   const removePackage = (i) => set('ball_packages', form.ball_packages.filter((_, idx) => idx !== i))
-
-  const addItem = () => set('items', [...(form.items || []), { id: Date.now().toString(), name: '', emoji: '🎈', price: 0 }])
-  const updateItem = (i, field, value) => {
-    const next = [...form.items]
-    next[i] = { ...next[i], [field]: value }
-    set('items', next)
-  }
-  const removeItem = (i) => set('items', form.items.filter((_, idx) => idx !== i))
 
   return (
     <div className="space-y-3.5">
@@ -198,17 +191,9 @@ export default function ActivityEditForm({ form, onChange }) {
       )}
 
       {form.calculator_type === 'rental' && (
-        <div className="space-y-2">
-          <label className="block text-[11px] font-semibold text-slate-500">Itens disponíveis</label>
-          {(form.items || []).map((it, i) => (
-            <div key={it.id || i} className="flex gap-1.5 items-center">
-              <input placeholder="🏰" value={it.emoji} onChange={e => updateItem(i, 'emoji', e.target.value)} className={iCls + ' max-w-[46px] text-center'} />
-              <input placeholder="Nome" value={it.name} onChange={e => updateItem(i, 'name', e.target.value)} className={iCls} />
-              <input type="number" placeholder="€" value={it.price} onChange={e => updateItem(i, 'price', Number(e.target.value))} className={iCls + ' max-w-[65px]'} />
-              <button type="button" onClick={() => removeItem(i)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
-            </div>
-          ))}
-          <button type="button" onClick={addItem} className="flex items-center gap-1 text-xs font-semibold text-orange-600"><Plus className="w-3 h-3" /> Adicionar item</button>
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2.5">Alugueres — cartões e páginas</p>
+          <RentalItemsEditor items={form.items || []} onChange={v => set('items', v)} activityId={form.id} onEditingItem={onEditingItem} />
         </div>
       )}
 

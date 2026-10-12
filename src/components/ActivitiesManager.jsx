@@ -15,6 +15,19 @@ function newActivityDraft() {
     long_description: '', safety_rules: [], gallery: [], price_note: '', discount_pct: 0, discount_label: '',
   }
 }
+// Itens de aluguer novos (id "novo-…"): o endereço da página passa a ser o nome (único).
+function finalizeItems(items) {
+  if (!Array.isArray(items)) return items
+  const used = new Set(items.filter(it => !String(it.id).startsWith('novo-')).map(it => String(it.id)))
+  return items.map(it => {
+    if (!String(it.id).startsWith('novo-')) return it
+    const base = slugify(it.name) || 'item'
+    let id = base
+    for (let n = 2; used.has(id); n++) id = `${base}-${n}`
+    used.add(id)
+    return { ...it, id }
+  })
+}
 function slugify(s) {
   return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
 }
@@ -28,6 +41,7 @@ export default function ActivitiesManager({ onDraftChange, onEditingChange }) {
   const [draftActivities, setDraftActivities] = useState([])
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState(null)
+  const [editingItemId, setEditingItemId] = useState(null)   // aluguer aberto → a pré-visualização mostra a página dele
 
   useEffect(() => { setDraftActivities(activities) }, [activities])
 
@@ -39,7 +53,10 @@ export default function ActivitiesManager({ onDraftChange, onEditingChange }) {
 
   useEffect(() => { onDraftChange?.(previewActivities) }, [previewActivities]) // eslint-disable-line react-hooks/exhaustive-deps
   // A pré-visualização abre a página da atividade que está a ser editada.
-  useEffect(() => { onEditingChange?.(editingId && editingId !== 'NEW' ? editingId : null) }, [editingId]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const id = editingId && editingId !== 'NEW' ? editingId : null
+    onEditingChange?.(id && editingItemId ? `${id}/${editingItemId}` : id)
+  }, [editingId, editingItemId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startEdit = (a) => { setEditingId(a.id); setForm({ ...a }) }
   const startNew = () => { setEditingId('NEW'); setForm(newActivityDraft()) }
@@ -48,7 +65,7 @@ export default function ActivitiesManager({ onDraftChange, onEditingChange }) {
   const save = useMutation({
     mutationFn: async () => {
       const id = editingId === 'NEW' ? (slugify(form.name) || `atividade-${Date.now()}`) : editingId
-      const { error } = await supabase.from('activities').upsert({ ...form, id, updated_at: new Date().toISOString() })
+      const { error } = await supabase.from('activities').upsert({ ...form, id, items: finalizeItems(form.items), updated_at: new Date().toISOString() })
       if (error) throw error
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['activities'] }); qc.invalidateQueries({ queryKey: ['all-activities'] }); toast.success('Guardado!'); cancel() },
@@ -70,7 +87,7 @@ export default function ActivitiesManager({ onDraftChange, onEditingChange }) {
         <button onClick={cancel} className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800">
           <ArrowLeft className="w-3.5 h-3.5" /> Voltar à lista
         </button>
-        <ActivityEditForm form={form} onChange={setForm} />
+        <ActivityEditForm form={form} onChange={setForm} onEditingItem={setEditingItemId} />
         <button onClick={() => save.mutate()} disabled={save.isPending}
           className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl text-sm font-bold shadow-sm disabled:opacity-50">
           {save.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
