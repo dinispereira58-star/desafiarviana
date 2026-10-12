@@ -15,7 +15,7 @@ export const itemCategory = it => it.category || (/trampol|cama.*el[aá]stic/i.t
 function newItem(category) {
   const c = RENTAL_CATEGORIES.find(x => x.key === category)
   return {
-    id: `novo-${Date.now()}`, category, name: '', emoji: c.emoji, price: 0, size: '',
+    id: `novo-${Date.now()}`, category, name: '', emoji: c.emoji, price_half: 0, price: 0, size: '',
     description: '', details: '', features: [], extra_prices: [], photo_url: null, gallery: [],
   }
 }
@@ -71,7 +71,7 @@ export default function RentalItemsEditor({ items = [], onChange, activityId, on
                   <button type="button" onClick={() => setEditing(it.id)} className="flex-1 min-w-0 text-left">
                     <p className="text-sm font-semibold text-slate-800 truncate">{it.name || <span className="text-slate-400 italic">Sem nome</span>}</p>
                     <p className="text-[11px] text-slate-400 truncate">
-                      {it.size ? <><Ruler className="w-3 h-3 inline -mt-0.5" /> {it.size} · </> : null}{Number(it.price) > 0 ? `${it.price}€/dia` : 'sob consulta'}
+                      {it.size ? <><Ruler className="w-3 h-3 inline -mt-0.5" /> {it.size} · </> : null}{[Number(it.price_half) > 0 && `${it.price_half}€ meio dia`, Number(it.price) > 0 && `${it.price}€ dia inteiro`].filter(Boolean).join(' · ') || 'sob consulta'}
                     </p>
                   </button>
                   <div className="flex flex-col shrink-0">
@@ -150,23 +150,29 @@ function ItemForm({ item, set, activityId, onBack, onRemove }) {
         </div>
       </div>
 
+      <div>
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Tamanho</label>
+        <input value={item.size || ''} onChange={e => set({ size: e.target.value })} placeholder="Ex: 5 x 4 x 3 m" className={iCls} />
+      </div>
+
       <div className="grid grid-cols-2 gap-2.5">
         <div>
-          <label className="block text-[11px] font-semibold text-slate-500 mb-1">Tamanho</label>
-          <input value={item.size || ''} onChange={e => set({ size: e.target.value })} placeholder="Ex: 5 x 4 x 3 m" className={iCls} />
+          <label className="block text-[11px] font-semibold text-slate-500 mb-1">Preço meio dia (€)</label>
+          <input type="number" min={0} step="0.5" value={item.price_half ?? ''} onChange={e => set({ price_half: Number(e.target.value) })} className={iCls} />
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-slate-500 mb-1">Preço por dia (€)</label>
+          <label className="block text-[11px] font-semibold text-slate-500 mb-1">Preço dia inteiro (€)</label>
           <input type="number" min={0} step="0.5" value={item.price ?? ''} onChange={e => set({ price: Number(e.target.value) })} className={iCls} />
         </div>
       </div>
+      <p className="text-[10px] text-slate-400 -mt-1.5">No simulador escolhe-se meio dia ou dia inteiro. Se só preencheres um, serve para os dois.</p>
 
       <div>
-        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Outros preços <span className="font-normal text-slate-400">— ex.: meio dia, monitor, transporte</span></label>
+        <label className="block text-[11px] font-semibold text-slate-500 mb-1">Outros preços <span className="font-normal text-slate-400">— ex.: monitor, transporte</span></label>
         <div className="space-y-1.5">
           {extras.map((p, i) => (
             <div key={i} className="flex gap-1.5 items-center">
-              <input value={p.label} onChange={e => updateIn('extra_prices', extras, i, 'label', e.target.value)} placeholder="Ex: Meio dia (4h)" className={iCls} />
+              <input value={p.label} onChange={e => updateIn('extra_prices', extras, i, 'label', e.target.value)} placeholder="Ex: Monitor" className={iCls} />
               <input type="number" min={0} step="0.5" value={p.price ?? ''} onChange={e => updateIn('extra_prices', extras, i, 'price', Number(e.target.value))} placeholder="€" className={iCls + ' max-w-[70px]'} />
               <button type="button" onClick={() => setList('extra_prices', extras.filter((_, idx) => idx !== i))} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
