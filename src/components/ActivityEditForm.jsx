@@ -2,12 +2,14 @@ import { useRef, useState } from 'react'
 import { Plus, Trash2, Upload, Loader2, X } from 'lucide-react'
 import { uploadFile } from '@/lib/supabase'
 import RentalItemsEditor from '@/components/RentalItemsEditor'
+import PacksEditor from '@/components/PacksEditor'
 
 const iCls = 'w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-50 bg-slate-50 transition-all'
 const CALC_TYPES = [
   { key: 'people', label: 'Preço por pessoa' },
   { key: 'paintball', label: 'Pacotes de bolas (paintball)' },
   { key: 'rental', label: 'Itens avulsos (aluguer)' },
+  { key: 'packs', label: 'Packs (preço por festa, sem mínimo)' },
 ]
 const COLORS = [
   'from-orange-500 to-red-600', 'from-amber-400 to-orange-500', 'from-pink-500 to-purple-600',
@@ -187,6 +189,12 @@ export default function ActivityEditForm({ form, onChange, onEditingItem }) {
             </div>
           ))}
           <button type="button" onClick={addPackage} className="flex items-center gap-1 text-xs font-semibold text-orange-600"><Plus className="w-3 h-3" /> Adicionar pacote</button>
+        </div>
+      )}
+
+      {form.calculator_type === 'packs' && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+          <PacksEditor items={(form.items || []).filter(it => it.kind === 'pack' || it.kind === 'extra')} onChange={v => set('items', v)} />
         </div>
       )}
 
